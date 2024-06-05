@@ -9,6 +9,8 @@ replace github.com/filecoin-project/filecoin-ffi => ./extern/filecoin-ffi
 require (
 	github.com/filecoin-project/boost v1.7.5-0.20240403164353-16a4de2af416
 	github.com/filecoin-project/boost/extern/boostd-data v0.0.0-20231124125934-3233c510357f
+	github.com/filecoin-project/go-address v1.1.0
+	github.com/filecoin-project/lotus v1.26.1
 	github.com/ipfs/go-log/v2 v2.5.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/urfave/cli/v2 v2.25.7
@@ -46,7 +48,6 @@ require (
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/filecoin-project/boost-graphsync v0.13.10 // indirect
 	github.com/filecoin-project/filecoin-ffi v1.25.0-dev.1 // indirect
-	github.com/filecoin-project/go-address v1.1.0 // indirect
 	github.com/filecoin-project/go-amt-ipld/v2 v2.1.0 // indirect
 	github.com/filecoin-project/go-amt-ipld/v3 v3.1.0 // indirect
 	github.com/filecoin-project/go-amt-ipld/v4 v4.2.0 // indirect
@@ -67,7 +68,6 @@ require (
 	github.com/filecoin-project/go-statemachine v1.0.3 // indirect
 	github.com/filecoin-project/go-statestore v0.2.0 // indirect
 	github.com/filecoin-project/kubo-api-client v0.27.0 // indirect
-	github.com/filecoin-project/lotus v1.26.1 // indirect
 	github.com/filecoin-project/pubsub v1.0.0 // indirect
 	github.com/filecoin-project/specs-actors v0.9.15 // indirect
 	github.com/filecoin-project/specs-actors/v2 v2.3.6 // indirect
@@ -253,7 +253,7 @@ require (
 	golang.org/x/tools v0.18.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	gonum.org/v1/gonum v0.14.0 // indirect
-	google.golang.org/protobuf v1.32.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/cheggaaa/pb.v1 v1.0.28 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
