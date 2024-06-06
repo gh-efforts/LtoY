@@ -32,7 +32,6 @@ var FlagVeryVerbose = &cli.BoolFlag{
 func main() {
 	app := &cli.App{
 		Name:                 "LtoY",
-		Usage:                "Migrate boost to Local Index Directory",
 		EnableBashCompletion: true,
 		Version:              build.UserVersion(),
 		Flags: []cli.Flag{
