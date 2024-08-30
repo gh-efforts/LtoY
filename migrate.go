@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/filecoin-project/boost/extern/boostd-data/ldb"
 	"github.com/filecoin-project/boost/extern/boostd-data/model"
@@ -41,10 +42,11 @@ var migrateCmd = &cli.Command{
 			Required: false,
 			Value:    yugabyte.CqlTimeout,
 		},
-		&cli.BoolFlag{
-			Name:  "single",
-			Usage: "migrate single index for test",
-			Value: false,
+		&cli.IntFlag{
+			Name:     "parallel",
+			Usage:    "the number of indexes to be processed in parallel",
+			Required: false,
+			Value:    4,
 		},
 	},
 	Action: func(cctx *cli.Context) error {
@@ -96,7 +98,7 @@ var migrateCmd = &cli.Command{
 		}
 
 		if migrateType == "index" {
-			return migrateIndex(ctx, lstore, ystore, cctx.Bool("single"))
+			return migrateIndex(ctx, lstore, ystore, cctx.Int("parallel"))
 		} else if migrateType == "deal" {
 			return migrateDeal(ctx, lstore, ystore)
 		} else {
@@ -105,7 +107,7 @@ var migrateCmd = &cli.Command{
 	},
 }
 
-func migrateIndex(ctx context.Context, lstore *ldb.Store, ystore *yugabyte.Store, single bool) error {
+func migrateIndex(ctx context.Context, lstore *ldb.Store, ystore *yugabyte.Store, parallel int) error {
 	//List all pieces from leveldb
 	pieces, err := lstore.ListPieces(ctx)
 	if err != nil {
@@ -113,45 +115,66 @@ func migrateIndex(ctx context.Context, lstore *ldb.Store, ystore *yugabyte.Store
 	}
 	log.Infof("piece count in leveldb: %d", len(pieces))
 
+	errChan := make(chan error, len(pieces))
+	var wg sync.WaitGroup
+
+	semaphore := make(chan struct{}, parallel)
+
 	for _, piece := range pieces {
-		isIndexed, err := ystore.IsIndexed(ctx, piece)
-		if err != nil {
-			return err
-		}
-		if isIndexed {
-			log.Debugf("piece: %s alreat indexed", piece)
-			continue
-		}
+		wg.Add(1)
+		semaphore <- struct{}{}
+		go func(p cid.Cid) {
+			defer wg.Done()
+			defer func() { <-semaphore }()
 
-		isCompleteIndex, err := lstore.IsCompleteIndex(ctx, piece)
-		if err != nil {
-			return err
-		}
-
-		//Get index from leveldb
-		resp, err := lstore.GetIndex(ctx, piece)
-		if err != nil {
-			return err
-		}
-		var records []model.Record
-		for r := range resp {
-			if r.Error != nil {
-				return r.Error
+			isIndexed, err := ystore.IsIndexed(ctx, p)
+			if err != nil {
+				errChan <- err
+				return
 			}
-			records = append(records, r.Record)
-		}
-
-		//Add index to yugabytedb
-		respch := ystore.AddIndex(ctx, piece, records, isCompleteIndex)
-		for resp := range respch {
-			if resp.Err != "" {
-				return fmt.Errorf("adding index %s to store: %s", piece, resp.Err)
+			if isIndexed {
+				log.Debugf("piece: %s already indexed", p)
+				return
 			}
-		}
 
-		log.Debugw("migrate index", "piece", piece, "records", len(records))
-		if single {
-			return nil
+			isCompleteIndex, err := lstore.IsCompleteIndex(ctx, p)
+			if err != nil {
+				errChan <- err
+				return
+			}
+
+			resp, err := lstore.GetIndex(ctx, p)
+			if err != nil {
+				errChan <- err
+				return
+			}
+			var records []model.Record
+			for r := range resp {
+				if r.Error != nil {
+					errChan <- r.Error
+					return
+				}
+				records = append(records, r.Record)
+			}
+
+			respch := ystore.AddIndex(ctx, p, records, isCompleteIndex)
+			for resp := range respch {
+				if resp.Err != "" {
+					errChan <- fmt.Errorf("adding index %s to store: %s", p, resp.Err)
+					return
+				}
+			}
+
+			log.Debugw("migrate index", "piece", p, "records", len(records))
+		}(piece)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	for err := range errChan {
+		if err != nil {
+			return err
 		}
 	}
 
