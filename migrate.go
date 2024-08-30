@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/filecoin-project/boost/extern/boostd-data/ldb"
 	"github.com/filecoin-project/boost/extern/boostd-data/model"
@@ -115,6 +117,24 @@ func migrateIndex(ctx context.Context, lstore *ldb.Store, ystore *yugabyte.Store
 	}
 	log.Infof("piece count in leveldb: %d", len(pieces))
 
+	var processedCount int64
+	totalCount := int64(len(pieces))
+
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				progress := float64(atomic.LoadInt64(&processedCount)) / float64(totalCount) * 100
+				log.Infof("migrate index progress: %.2f%% (%d/%d)", progress, atomic.LoadInt64(&processedCount), totalCount)
+			}
+		}
+	}()
+
 	errChan := make(chan error, len(pieces))
 	var wg sync.WaitGroup
 
@@ -166,6 +186,7 @@ func migrateIndex(ctx context.Context, lstore *ldb.Store, ystore *yugabyte.Store
 			}
 
 			log.Debugw("migrate index", "piece", p, "records", len(records))
+			atomic.AddInt64(&processedCount, 1)
 		}(piece)
 	}
 
