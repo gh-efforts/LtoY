@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 
-	"github.com/filecoin-project/boost/build"
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/urfave/cli/v2"
 )
@@ -33,7 +32,8 @@ func main() {
 	app := &cli.App{
 		Name:                 "LtoY",
 		EnableBashCompletion: true,
-		Version:              build.UserVersion(),
+		Version:              "0.0.1",
+		Usage:                "Migrate boost index and deal from levelDB to yugabyteDB",
 		Flags: []cli.Flag{
 			FlagRepo,
 			FlagVeryVerbose,

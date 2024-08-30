@@ -9,7 +9,6 @@ import (
 	"github.com/filecoin-project/boost/extern/boostd-data/svc"
 	"github.com/filecoin-project/boost/extern/boostd-data/yugabyte"
 	"github.com/filecoin-project/go-address"
-	lcli "github.com/filecoin-project/lotus/cli"
 	"github.com/ipfs/go-cid"
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli/v2"
@@ -49,7 +48,7 @@ var migrateCmd = &cli.Command{
 		},
 	},
 	Action: func(cctx *cli.Context) error {
-		ctx := lcli.ReqContext(cctx)
+		ctx := cctx.Context
 
 		var pieceCID cid.Cid
 		var err error

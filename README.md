@@ -2,12 +2,7 @@
 Migrate boost index and deal from levelDB to yugabyteDB 
 ## build
 ```bash
-#ffi
-git submodule update --init --recursive
-cd extern/filecoin-ffi
-make
 #LtoT
-cd ../../
 go build
 ```
 ## Usage
